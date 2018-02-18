@@ -5,7 +5,7 @@
 #include <SoftwareSerial.h>
 
 
-//SoftwareSerial wifi(8,9); 
+SoftwareSerial wifi(8,2); 
 
 //Pines TFT
 #define TFT_DC 9
@@ -128,7 +128,7 @@ void setup(){
   
   
   tft.begin();
-  tft.setRotation(4);  
+  tft.setRotation(0);  
   tft.fillScreen(ILI9341_BLACK); 
 
 
@@ -140,20 +140,36 @@ void setup(){
   ts.setPrecision(PREC_MEDIUM);
   tft.setTextColor(ILI9341_WHITE);
 
+  Serial.begin(9600); 
+  wifi.begin(9600);
+
 
 }
  
 void loop()
 {
 
-/*
+
  if (wifi.available()){
         message = wifi.readString();
         message.trim();
-        tft.print("OFF");
+
+if (message == "cmnd/MT_1/POWER/ON") {button[0][5] = 0;button_change(0,40);}
+if (message == "cmnd/MT_1/POWER/OFF") {button[0][5] = 1;button_change(0,40);}      
+
+  if (message == "cmnd/MT_2/POWER/ON") {button[1][5] = 0;button_change(1,120);}
+if (message == "cmnd/MT_2/POWER/OFF") {button[1][5] = 1;button_change(1,120);}  
+
+if (message == "cmnd/MT_3/POWER/ON") {button[2][5] = 0;button_change(2,200);}
+if (message == "cmnd/MT_3/POWER/OFF") {button[2][5] = 1;button_change(2,200);}  
+
+if (message == "cmnd/MT_4/POWER/ON") {button[3][5] = 0;button_change(3,270);}
+if (message == "cmnd/MT_4/POWER/OFF") {button[3][5] = 1;button_change(3,270);}  
+       
       } 
 
- */    
+     
+
 
       
 while(ts.dataAvailable())
@@ -162,17 +178,12 @@ while(ts.dataAvailable())
     x = (ts.getX()-320)*-1;
     y = ts.getY();
 
-    button_change(0,x);
-    button_change(1,x);
-    button_change(2,x);
-    button_change(3,x);
+    button_change_send(0,x);
+    button_change_send(1,x);
+    button_change_send(2,x);
+    button_change_send(3,x);
 
   }
-
-
-
- // wifi.write("ON");
- // delay(300);
 
 }
  
@@ -187,6 +198,33 @@ void button_status(const uint8_t *icon_name, String text_name,int s_x, int s_y, 
   
 }
 
+void button_change_send (int Num_Button, int x) {
+    
+    if (x > button[Num_Button][2]  and x < button[Num_Button][2]+button[Num_Button][4]) 
+      {
+        if (button[Num_Button][5] == 0) {
+          button_status(button[Num_Button][0],button_name[Num_Button],button[Num_Button][1],button[Num_Button][2],button[Num_Button][3],button[Num_Button][4],button_color_fill_on, button_color_icon_on, button_color_text_on);
+        button[Num_Button][5] = 1;
+       if (Num_Button == 0) {wifi.write("1");}
+         if (Num_Button == 1) {wifi.write("2");}
+          if (Num_Button == 2) {wifi.write("3");}
+           if (Num_Button == 3) {wifi.write("4");}
+        wifi.write("ON");
+        delay(20);
+        }else{
+          button_status(button[Num_Button][0],button_name[Num_Button],button[Num_Button][1],button[Num_Button][2],button[Num_Button][3],button[Num_Button][4],button_color_fill_off, button_color_icon_off, button_color_text_off);
+        button[Num_Button][5] = 0;
+              if (Num_Button == 0) {wifi.write("1");}
+         if (Num_Button == 1) {wifi.write("2");}
+          if (Num_Button == 2) {wifi.write("3");}
+           if (Num_Button == 3) {wifi.write("4");}
+        wifi.write("OFF");
+        delay(20);   
+        }
+      }
+
+}
+
 void button_change (int Num_Button, int x) {
     
     if (x > button[Num_Button][2]  and x < button[Num_Button][2]+button[Num_Button][4]) 
@@ -194,13 +232,11 @@ void button_change (int Num_Button, int x) {
         if (button[Num_Button][5] == 0) {
           button_status(button[Num_Button][0],button_name[Num_Button],button[Num_Button][1],button[Num_Button][2],button[Num_Button][3],button[Num_Button][4],button_color_fill_on, button_color_icon_on, button_color_text_on);
         button[Num_Button][5] = 1;
-        Serial.write("ON");
-        delay(200);
+        delay(20);
         }else{
           button_status(button[Num_Button][0],button_name[Num_Button],button[Num_Button][1],button[Num_Button][2],button[Num_Button][3],button[Num_Button][4],button_color_fill_off, button_color_icon_off, button_color_text_off);
         button[Num_Button][5] = 0;
-        Serial.write("OFF");
-        delay(200);  
+        delay(20);   
         }
       }
 
