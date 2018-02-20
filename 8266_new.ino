@@ -18,8 +18,8 @@ PubSubClient client(espClient);
 
 DHT dht(DHTPIN, DHTTYPE);
 
-const char* ssid = "Linksys_17211_2";
-const char* password = "La794Vlh";
+const char* ssid = "**************";
+const char* password = "**************";
 String webSite,javaScript,XML;
 
 // NTP
