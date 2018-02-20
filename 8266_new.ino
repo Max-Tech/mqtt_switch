@@ -36,7 +36,8 @@ unsigned long prevNTP = 0;
 unsigned long lastNTPResponse = millis();
 uint32_t timeUNIX = 0;
 
-unsigned long prevActualTime = 0;                               
+unsigned long prevActualTime = 0;  
+uint32_t actualTime;                             
 
 ESP8266WebServer server(80);
 
@@ -96,16 +97,29 @@ void setup(void){
 
 
 
-void loop(void){  
+void loop(void){ 
+
+
+   
   server.handleClient();
   
-  //if (!client.connected()) {reconnect();}
-  //client.loop();
- 
-  //getAndSendTemperatureAndHumidityData();
+  if (!client.connected()) {reconnect();}
+  client.loop();
 
   time_now();
- 
+
+  if (actualTime != prevActualTime && timeUNIX != 0 && actualTime > prevActualTime+60) { // If a second has passed since last print
+    prevActualTime = actualTime;
+    Serial.printf("\rTime:\t%d:%d:%d   ", getHours(actualTime), getMinutes(actualTime), getSeconds(actualTime));
+    Serial.println();
+    getAndSendTemperatureAndHumidityData();
+      
+  }  
+
+  if (Serial.available()){
+    String in_data = Serial.readString();
+    if (in_data == "1ON") {client.publish("cmnd/MT_1/POWER", "ON"); }
+  }
 }
 
 
@@ -139,13 +153,9 @@ unsigned long currentMillis = millis();
     ESP.reset();
   }
 
-  uint32_t actualTime = timeUNIX + (currentMillis - lastNTPResponse)/1000;
-  if (actualTime != prevActualTime && timeUNIX != 0) { // If a second has passed since last print
-    prevActualTime = actualTime;
-    Serial.printf("\rUTC time:\t%d:%d:%d   ", getHours(actualTime), getMinutes(actualTime), getSeconds(actualTime));
-    Serial.println();
-      
-  }  
+  actualTime = timeUNIX + (currentMillis - lastNTPResponse)/1000;
+  
+  
 }
 
 uint32_t getTime() {
@@ -160,7 +170,7 @@ uint32_t getTime() {
   const uint32_t seventyYears = 2208988800UL;
   // subtract seventy years:
   uint32_t UNIXTime = NTPTime - seventyYears;
-  return UNIXTime;
+  return UNIXTime-(3600*5);
 }
 
 void sendNTPpacket(IPAddress& address) {
@@ -189,7 +199,8 @@ inline int getHours(uint32_t UNIXTime) {
 
 void getAndSendTemperatureAndHumidityData()
 {
-  Serial.println("Collecting temperature data.");
+  Serial.print("Collecting temperature data. - ");
+  Serial.println(actualTime);
 
  
   float h = dht.readHumidity();
@@ -200,26 +211,19 @@ void getAndSendTemperatureAndHumidityData()
     return;
   }
 
-  Serial.print("Humidity: ");
-  Serial.print(h);
-  Serial.print(" %\t");
-  Serial.print("Temperature: ");
-  Serial.print(t);
-  Serial.print(" *C ");
 
   String temperature = String(t);
   String humidity = String(h);
 
-  Serial.print( "Sending temperature and humidity : [" );
-  Serial.print( temperature ); Serial.print( "," );
-  Serial.print( humidity );
-  Serial.print( "]   -> " );
-
   String payload = "{";
-  payload += "\"temperature\":"; payload += temperature; payload += ",";
-  payload += "\"humidity\":"; payload += humidity;
+  payload +="\"Time\":\"00:00:00\",";
+  payload +="\"AM2301\":";
+  payload +="{";
+  payload += "\"Temperature\":"; payload += temperature; payload += ",";
+  payload += "\"Humidity\":"; payload += humidity;
   payload += "}";
-
+  payload += ",";
+  payload += "\"TempUnit\":\"C\"}";
   char attributes[100];
   payload.toCharArray( attributes, 100 );
   client.publish( "tele/MT/SENSOR", attributes );
@@ -244,6 +248,7 @@ void reconnect() {
   while (!client.connected()) {
     if (client.connect("ESP8266Client")) {
       client.subscribe("tele/MT/SENSOR");
+      client.subscribe("cmnd/MT_1/POWER");
     } else {
       delay(5000);
     }
@@ -305,7 +310,7 @@ void buildXML(){
 
 String DataFromArduino(){
   String coming;
-  while(Serial.available()){coming=Serial.readString();}
+  coming=actualTime;
   return coming;
   }
 
